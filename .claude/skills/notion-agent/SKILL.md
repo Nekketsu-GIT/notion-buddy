@@ -1,5 +1,7 @@
 ---
+name: notion-agent
 description: Run or develop the Notion Intelligence Layer agent (ingest / search / run / demo / test)
+allowed-tools: Read Grep Glob Bash Edit Write
 ---
 
 You are working inside the **Notion Intelligence Layer** project — a Python CLI that combines RAG + MCP + Claude agent over a Notion workspace.

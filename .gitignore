@@ -4,6 +4,9 @@
 # Vector store (local, regenerable via ingest)
 .chroma/
 
+# Agent run log (local history, contains prompts and page IDs)
+.agent_log/
+
 # Python
 __pycache__/
 *.py[cod]

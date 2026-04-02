@@ -73,6 +73,18 @@ run:                           ## Run the agent (usage: make run P="your prompt"
 demo:                          ## Run the pre-built workspace audit demo
 	$(PYTHON) -m notion_agent demo
 
+.PHONY: demo-dry
+demo-dry:                      ## Dry-run the demo (no writes to Notion)
+	$(PYTHON) -m notion_agent demo --dry-run
+
+.PHONY: log
+log:                           ## Show recent agent runs
+	$(PYTHON) -m notion_agent log
+
+.PHONY: rollback
+rollback:                      ## Roll back a run (usage: make rollback RUN=20260402_143022)
+	$(PYTHON) -m notion_agent rollback "$(RUN)"
+
 # ─── Docker ────────────────────────────────────────────────────────────────
 # ChromaDB runs embedded (local file), so no compose needed — just one image.
 # The chroma volume persists the index across container runs.

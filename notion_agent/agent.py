@@ -6,6 +6,7 @@ import asyncio
 import json
 import sys
 import time
+from datetime import datetime, timezone
 from typing import Any
 
 import anthropic
@@ -33,6 +34,9 @@ MODEL = "claude-sonnet-4-6"
 MAX_TOKENS = 4096
 MAX_ITERATIONS = 10
 
+# Tools that modify Notion — intercepted in dry-run mode.
+WRITE_TOOLS = {"create_page", "append_blocks", "update_page_property"}
+
 
 def _first_text(blocks: list[Any], reverse: bool = False) -> str:
     """Return the first non-empty text from a list of response content blocks."""
@@ -43,12 +47,20 @@ def _first_text(blocks: list[Any], reverse: bool = False) -> str:
     return ""
 
 
-class NotionAgent:
-    def run(self, prompt: str, verbose: bool = True) -> AgentResult:
-        return asyncio.run(self._run_async(prompt, verbose))
+def _make_run_id() -> str:
+    return datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 
-    async def _run_async(self, prompt: str, verbose: bool) -> AgentResult:
+
+class NotionAgent:
+    def run(self, prompt: str, verbose: bool = True, dry_run: bool = False) -> AgentResult:
+        return asyncio.run(self._run_async(prompt, verbose, dry_run))
+
+    async def _run_async(self, prompt: str, verbose: bool, dry_run: bool) -> AgentResult:
         start = time.monotonic()
+        run_id = _make_run_id()
+
+        if dry_run and verbose:
+            print("[dry-run] Write tools are disabled — no changes will be made to Notion.\n", flush=True)
 
         server_params = StdioServerParameters(
             command=sys.executable,
@@ -73,6 +85,7 @@ class NotionAgent:
                 messages: list[dict] = [{"role": "user", "content": prompt}]
                 actions_taken: list[str] = []
                 pages_created: list[str] = []
+                pages_created_ids: list[str] = []
                 iterations = 0
                 response = None
 
@@ -81,6 +94,22 @@ class NotionAgent:
                     actions_taken.append(action)
                     if verbose:
                         print(f"\n[tool] {action}", flush=True)
+
+                    # Dry-run: intercept writes, return a description instead.
+                    if dry_run and tool_call.name in WRITE_TOOLS:
+                        result_text = json.dumps({
+                            "dry_run": True,
+                            "would_execute": tool_call.name,
+                            "with_args": tool_call.input,
+                        })
+                        if verbose:
+                            print(f"[dry-run] skipped write: {tool_call.name}", flush=True)
+                        return {
+                            "type": "tool_result",
+                            "tool_use_id": tool_call.id,
+                            "content": result_text,
+                        }
+
                     try:
                         result = await session.call_tool(tool_call.name, tool_call.input)
                         result_text = result.content[0].text if result.content else "{}"
@@ -89,6 +118,8 @@ class NotionAgent:
                                 data = json.loads(result_text)
                                 if url := data.get("url"):
                                     pages_created.append(url)
+                                if pid := data.get("page_id"):
+                                    pages_created_ids.append(pid)
                             except (json.JSONDecodeError, AttributeError):
                                 pass
                         if verbose:
@@ -134,10 +165,17 @@ class NotionAgent:
                     tool_results = await asyncio.gather(*[_call_tool(tc) for tc in tool_use_blocks])
                     messages.append({"role": "user", "content": list(tool_results)})
 
-                return AgentResult(
+                result = AgentResult(
                     final_answer=_first_text(response.content, reverse=True) if response else "",
                     actions_taken=actions_taken,
                     pages_created=pages_created,
                     duration_seconds=time.monotonic() - start,
                     iterations=iterations,
+                    run_id=run_id,
                 )
+
+                # Always log the run (dry or real).
+                from notion_agent.action_log import log_run
+                log_run(run_id, prompt, dry_run, result, pages_created_ids)
+
+                return result
