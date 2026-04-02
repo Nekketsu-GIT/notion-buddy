@@ -32,8 +32,8 @@ The key difference from Notion MCP or Claude chat: the workspace is **pre-indexe
 ### 2. Setup
 
 ```bash
-git clone <repo>
-cd notion-workflow-automation
+git clone https://github.com/Nekketsu-GIT/notion-buddy
+cd notion-buddy
 make setup          # creates .venv + installs all deps
 source .venv/Scripts/activate  # Windows
 # source .venv/bin/activate    # macOS/Linux
