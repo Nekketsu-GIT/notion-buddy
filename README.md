@@ -2,7 +2,9 @@
 
 A Python CLI that combines **RAG + MCP + Claude** to turn a Notion workspace into a queryable, agent-driven knowledge graph.
 
-Demo scenario: *"Find all Q1 planning pages, summarize key decisions, flag stale pages, and write an audit report back to Notion."*
+**Current status:** Proof of concept — all 4 phases complete and working.
+
+Demo scenario: *"From the workspace pages, extract decisions, open questions, and next actions. Update the 'Décisions & questions ouvertes' page accordingly, with source citations."*
 
 ---
 
@@ -10,12 +12,12 @@ Demo scenario: *"Find all Q1 planning pages, summarize key decisions, flag stale
 
 ```
 CLI prompt
-  └─► Agent (claude-sonnet-4-6, tool loop)
-        ├─► RAG search  →  ChromaDB (local embeddings)
-        └─► MCP tools   →  Notion REST API
+  └─► Agent (claude-sonnet-4-6, tool loop, max 10 iterations)
+        ├─► RAG search  →  ChromaDB (local semantic index)
+        └─► MCP tools   →  Notion REST API (read + write)
 ```
 
-The agent reasons over semantic search results and Notion page content, then writes structured reports back to Notion — all from a single natural language prompt.
+The key difference from Notion MCP or Claude chat: the workspace is **pre-indexed semantically**, so the agent can find relevant content across all pages without knowing their names in advance — then execute a full multi-step workflow autonomously from a single prompt.
 
 ---
 
@@ -24,7 +26,6 @@ The agent reasons over semantic search results and Notion page content, then wri
 ### 1. Prerequisites
 
 - Python 3.11+
-- Docker (optional, for containerised runs)
 - A Notion workspace with an [integration key](https://www.notion.so/my-integrations)
 - An Anthropic API key
 
@@ -50,7 +51,7 @@ CHROMA_PERSIST_DIR=./.chroma
 LOG_LEVEL=INFO
 ```
 
-> **Important:** add your Notion integration to every page/database you want indexed via the `...` → Connections menu in Notion.
+> **Important:** add your Notion integration to every page you want indexed via the `...` → Connections menu in Notion.
 
 ### 4. Index your workspace
 
@@ -65,10 +66,10 @@ make ingest
 # Semantic search (no writes)
 make search Q="Q1 planning decisions"
 
-# Full agent run
+# Full agent run with a custom prompt
 make run P="Summarise all pages updated in the last 7 days"
 
-# Pre-built workspace audit demo
+# Pre-built demo scenario
 make demo
 ```
 
@@ -80,7 +81,6 @@ No external services needed — ChromaDB runs embedded. A named volume persists 
 
 ```bash
 make docker-build
-
 make docker-ingest
 make docker-search Q="your query"
 make docker-run    P="your prompt"
@@ -102,7 +102,6 @@ notion_agent/
 └── __main__.py      — CLI entry points
 
 tests/
-├── conftest.py          — shared fixtures + mock Notion client
 ├── test_ingestion.py
 ├── test_vector_store.py
 └── test_mcp_tools.py
@@ -125,13 +124,35 @@ make test-cov       # tests + HTML coverage report
 make test-fast      # stop on first failure
 ```
 
-See `SPEC.md` for the full technical specification and `CLAUDE.md` for AI-navigation context and dev workflow.
+See `SPEC.md` for the full technical specification and `CLAUDE.md` for AI-navigation context, dev workflow, and the product vision.
 
 ---
 
 ## Implementation status
 
-- [ ] Phase 1 — Foundation (`config`, `models`, `ingestion`)
-- [ ] Phase 2 — RAG (`vector_store` + embeddings)
-- [ ] Phase 3 — MCP server (6 tools)
-- [ ] Phase 4 — Agent + demo
+- [x] Phase 1 — Foundation (`config`, `models`, `ingestion`)
+- [x] Phase 2 — RAG (`vector_store` + embeddings)
+- [x] Phase 3 — MCP server (6 tools)
+- [x] Phase 4 — Agent + demo
+
+---
+
+## Vision — what this needs to become a real product
+
+The PoC proves the architecture works. The gap is not the AI logic — it's reliability, sync, trust, and UX.
+
+| Layer | Today | Needed |
+|---|---|---|
+| Sync | Manual `make ingest` | Webhook / polling, < 5 min lag |
+| Reliability | Best-effort | Retry, structured action log |
+| Trust | Agent writes freely | Dry-run mode, rollback, scoped permissions |
+| Scale | Embedded ChromaDB | Server-mode vector store, pagination |
+| Interface | Terminal | Slack bot or minimal web UI |
+
+**Next phases:**
+- [ ] Phase 5 — Sync: incremental re-ingestion via webhook or polling
+- [ ] Phase 6 — Trust: dry-run flag, action log, rollback, scoped write permissions
+- [ ] Phase 7 — Scale: server-mode vector store, multi-workspace config
+- [ ] Phase 8 — Interface: Slack bot or minimal web UI (run history, revert button)
+
+Full roadmap in `SPEC.md`.
