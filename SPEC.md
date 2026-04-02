@@ -8,8 +8,9 @@ can read, reason over, and write back to Notion — all driven by a single natur
 language prompt.
 
 **Primary demo scenario:**
-> "Find all pages related to Q1 planning, summarize key decisions, identify owners
-> who haven't updated their content in 30+ days, and create an audit report in Notion."
+> "From the workspace pages, extract: (1) decisions, (2) open questions, (3) next actions.
+> Update the 'Décisions & questions ouvertes' page accordingly, and cite the source page
+> for each item."
 
 ---
 
@@ -491,3 +492,56 @@ notion-workflow-automation/
 | Agent | Completes demo scenario in <10 iterations without manual intervention |
 | Demo | Runs end-to-end in <3 minutes with a fresh workspace |
 | Code quality | Each component is independently testable |
+
+---
+
+## Current status
+
+**Proof of concept — all 4 phases shipped and working.**
+
+The demo runs end-to-end: one prompt → agent searches the workspace semantically, reads relevant
+pages, reasons over content, and writes structured output (decisions, open questions, next actions
+with source citations) back to Notion. Architecture is sound. The distance to a professional product
+is not the AI logic — it's reliability, sync, trust, and UX.
+
+---
+
+## Vision — Road to a real product
+
+### The honest gap
+
+| Layer | PoC today | Product requirement |
+|---|---|---|
+| Sync | Manual `ingest` command | Continuous: webhook or polling, < 5 min lag |
+| Reliability | Best-effort, silent failures possible | Retry, structured action log, no silent writes |
+| Trust | Agent writes without confirmation | Dry-run mode, action log, rollback, scoped permissions |
+| Scale | ChromaDB embedded, all pages in memory | Server-mode vector store, pagination, multi-workspace |
+| Interface | Terminal only | Slack bot or minimal web UI with run history |
+
+### What differentiates this from Notion MCP + Claude chat
+
+**Notion MCP** gives Claude hands (tools to call the API).
+**Claude chat** gives you a conversation.
+**This project** adds the missing third piece: a pre-built semantic understanding of the whole
+workspace so the agent can find relevant content and execute multi-step workflows autonomously —
+without you driving each step or knowing in advance which pages matter.
+
+Concrete difference: the demo ran one prompt → 5 agent iterations → structured content written to
+the right Notion page with citations, touching 3 pages it was never told about.
+
+### Realistic product paths
+
+| Path | What you sell | First customer |
+|---|---|---|
+| **Vertical SaaS** | "Notion knowledge audit" — one polished workflow, $20–50/mo | Ops teams, chiefs of staff |
+| **Agency / service** | Deliver audit reports and decision logs as a managed service | Companies with large Notion workspaces |
+| **Internal tool** | Customized for one company's workspace | Setup + retainer, one paying client |
+
+The agency path can start with this codebase. The SaaS path needs Phases 5–8 first.
+
+### Next phases
+
+- [ ] **Phase 5** — Sync: incremental re-ingestion via webhook or polling loop
+- [ ] **Phase 6** — Trust: dry-run flag, structured action log, rollback, scoped write permissions
+- [ ] **Phase 7** — Scale: server-mode vector store, ingestion pagination, multi-workspace config
+- [ ] **Phase 8** — Interface: Slack bot or minimal web UI (run history, action log, revert button)

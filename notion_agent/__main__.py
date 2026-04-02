@@ -2,7 +2,15 @@
 
 from __future__ import annotations
 
+import sys
+
 import click
+
+# Ensure stdout/stderr can handle Unicode (e.g. emojis in Claude responses) on Windows.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 from notion_agent.ingestion import IngestionPipeline
 from notion_agent.vector_store import VectorStore
@@ -55,13 +63,20 @@ def run(prompt: str) -> None:
 
 
 @cli.command()
+def serve() -> None:
+    """Start the MCP stdio server (used internally by the agent)."""
+    from notion_agent.mcp_server import run_server
+    run_server()
+
+
+@cli.command()
 def demo() -> None:
     """Run the pre-built workspace audit demo."""
     from notion_agent.agent import NotionAgent
     prompt = (
-        "Find all pages related to Q1 planning, summarize key decisions, "
-        "identify owners who haven't updated their content in 30+ days, "
-        "and create an audit report in Notion."
+        "From the workspace pages, extract: (1) decisions, (2) open questions, "
+        "(3) next actions. Update the 'Décisions & questions ouvertes' page "
+        "accordingly, and cite the source page for each item."
     )
     agent = NotionAgent()
     result = agent.run(prompt)

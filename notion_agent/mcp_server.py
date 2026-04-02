@@ -229,4 +229,8 @@ def run_server() -> None:
         result = await handler()
         return [mct.TextContent(type="text", text=json.dumps(result, default=str))]
 
-    asyncio.run(stdio_server(server))
+    async def _main() -> None:
+        async with stdio_server() as (read_stream, write_stream):
+            await server.run(read_stream, write_stream, server.create_initialization_options())
+
+    asyncio.run(_main())
