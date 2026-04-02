@@ -1,0 +1,12 @@
+.venv/
+.chroma/
+__pycache__/
+*.pyc
+*.pyo
+.env
+htmlcov/
+.coverage
+tests/
+*.md
+Makefile
+.git/
