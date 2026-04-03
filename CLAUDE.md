@@ -2,6 +2,14 @@
 
 Full spec: `SPEC.md`. This file is the AI-navigation layer over it.
 
+## Project Setup
+- Python projects: always create virtualenv, split requirements (requirements.txt + requirements-dev.txt), include Makefile, and ensure tests pass before committing
+- Always include: CLAUDE.md, .env.example, .gitignore, README.md
+
+## Testing
+- Always run the full test suite (`make test` or `pytest`) after completing a phase or feature before marking it done
+- Target: all tests passing before moving to next phase
+
 ## What this project is
 
 Python CLI that combines RAG + MCP + Claude agent over a Notion workspace.
