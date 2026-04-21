@@ -10,11 +10,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Pre-download the embedding model so cold starts need no network access
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')"
+
 COPY notion_agent/ ./notion_agent/
 
-# ChromaDB persist dir inside container — mount a volume to keep it across runs
+# Persist dirs — mount volumes to keep data across runs
 ENV CHROMA_PERSIST_DIR=/data/chroma
-VOLUME ["/data/chroma"]
+ENV AGENT_LOG_DIR=/data/agent_log
+VOLUME ["/data/chroma", "/data/agent_log"]
 
 ENTRYPOINT ["python", "-m", "notion_agent"]
 CMD ["--help"]

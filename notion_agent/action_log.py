@@ -6,7 +6,9 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-LOG_DIR = Path(".agent_log")
+import os
+
+LOG_DIR = Path(os.environ.get("AGENT_LOG_DIR", ".agent_log"))
 LOG_FILE = LOG_DIR / "runs.jsonl"
 
 

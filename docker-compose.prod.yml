@@ -6,7 +6,10 @@ services:
       - .env.prod
     volumes:
       - chroma-data:/data/chroma
+      - agent-log:/data/agent_log
 
 volumes:
   chroma-data:
+    driver: local
+  agent-log:
     driver: local
