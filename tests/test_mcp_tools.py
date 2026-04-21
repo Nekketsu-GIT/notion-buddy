@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
-
 import pytest
 
 
@@ -31,7 +29,6 @@ class TestSearchWorkspace:
     async def test_filter_stale_excludes_recent_pages(self, mock_vector_store, sample_search_result):
         """filter_stale=True should exclude pages edited within the last 30 days."""
         from notion_agent.mcp_server import search_workspace
-        from datetime import datetime, timezone
 
         # sample_search_result.last_edited_time = 2026-03-01 — only 32 days before 2026-04-02
         # With freeze date not applied here we just verify the filter is passed down.
