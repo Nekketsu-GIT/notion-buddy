@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import sys
 import time
 from datetime import datetime, timezone
@@ -72,6 +73,7 @@ class NotionAgent:
         server_params = StdioServerParameters(
             command=sys.executable,
             args=["-m", "notion_agent", "serve"],
+            env=dict(os.environ),
         )
 
         async with stdio_client(server_params) as (read_stream, write_stream):
