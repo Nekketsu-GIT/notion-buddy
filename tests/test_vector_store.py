@@ -9,27 +9,33 @@ from unittest.mock import MagicMock, patch
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_chroma_query_result(page_id: str, chunk_text: str, score: float):
     """Build the dict shape that chromadb returns from collection.query()."""
     chunk_id = f"{page_id}_0"
     return {
         "ids": [[chunk_id]],
         "documents": [[chunk_text]],
-        "distances": [[1.0 - score]],   # chromadb stores L2 / cosine distance
-        "metadatas": [[{
-            "page_id": page_id,
-            "page_title": "Q1 Planning",
-            "page_url": f"https://www.notion.so/{page_id}",
-            "last_edited_time": "2026-03-01T00:00:00+00:00",
-            "last_edited_by": "Alice",
-            "is_database": False,
-        }]],
+        "distances": [[1.0 - score]],  # chromadb stores L2 / cosine distance
+        "metadatas": [
+            [
+                {
+                    "page_id": page_id,
+                    "page_title": "Q1 Planning",
+                    "page_url": f"https://www.notion.so/{page_id}",
+                    "last_edited_time": "2026-03-01T00:00:00+00:00",
+                    "last_edited_by": "Alice",
+                    "is_database": False,
+                }
+            ]
+        ],
     }
 
 
 # ---------------------------------------------------------------------------
 # Search
 # ---------------------------------------------------------------------------
+
 
 class TestVectorStoreSearch:
     def test_returns_search_results_above_threshold(self, sample_chunked_page):
@@ -62,7 +68,7 @@ class TestVectorStoreSearch:
         mock_collection.query.return_value = _make_chroma_query_result(
             sample_chunked_page.page_id,
             sample_chunked_page.text,
-            score=0.1,   # below threshold
+            score=0.1,  # below threshold
         )
 
         with patch("notion_agent.vector_store.chromadb") as mock_chroma:
@@ -79,7 +85,10 @@ class TestVectorStoreSearch:
 
         mock_collection = MagicMock()
         mock_collection.query.return_value = {
-            "ids": [[]], "documents": [[]], "distances": [[]], "metadatas": [[]]
+            "ids": [[]],
+            "documents": [[]],
+            "distances": [[]],
+            "metadatas": [[]],
         }
 
         with patch("notion_agent.vector_store.chromadb") as mock_chroma:
@@ -96,6 +105,7 @@ class TestVectorStoreSearch:
 # ---------------------------------------------------------------------------
 # Upsert
 # ---------------------------------------------------------------------------
+
 
 class TestVectorStoreUpsert:
     def test_upsert_calls_collection_upsert(self, sample_chunked_page):
@@ -129,6 +139,7 @@ class TestVectorStoreUpsert:
 # Delete
 # ---------------------------------------------------------------------------
 
+
 class TestVectorStoreDelete:
     def test_delete_page_removes_all_chunks(self, sample_chunked_page):
         from notion_agent.vector_store import VectorStore
@@ -150,6 +161,7 @@ class TestVectorStoreDelete:
 # ---------------------------------------------------------------------------
 # Count / last_indexed_at
 # ---------------------------------------------------------------------------
+
 
 class TestVectorStoreMetadata:
     def test_count_returns_integer(self):

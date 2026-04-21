@@ -39,6 +39,7 @@ def ingest(force: bool) -> None:
 def search(query: str, top_k: int) -> None:
     """Semantic search over the indexed workspace."""
     from notion_agent.config import get_settings
+
     settings = get_settings()
     store = VectorStore(persist_dir=settings.chroma_persist_dir)
     results = store.search(query, top_k=top_k)
@@ -58,15 +59,19 @@ def search(query: str, top_k: int) -> None:
 def run(prompt: str, dry_run: bool) -> None:
     """Run the full agent with a natural language prompt."""
     from notion_agent.agent import NotionAgent
+
     result = NotionAgent().run(prompt, dry_run=dry_run)
     click.echo(result.final_answer)
-    click.echo(f"\nRun ID: {result.run_id}  ({result.iterations} iterations, {result.duration_seconds:.1f}s)")
+    click.echo(
+        f"\nRun ID: {result.run_id}  ({result.iterations} iterations, {result.duration_seconds:.1f}s)"
+    )
 
 
 @cli.command()
 def serve() -> None:
     """Start the MCP stdio server (used internally by the agent)."""
     from notion_agent.mcp_server import run_server
+
     run_server()
 
 
@@ -75,6 +80,7 @@ def serve() -> None:
 def demo(dry_run: bool) -> None:
     """Run the pre-built workspace audit demo."""
     from notion_agent.agent import NotionAgent
+
     prompt = (
         "From the workspace pages, extract: (1) decisions, (2) open questions, "
         "(3) next actions. Update the 'Décisions & questions ouvertes' page "
@@ -86,7 +92,9 @@ def demo(dry_run: bool) -> None:
         click.echo("\nPages created:")
         for url in result.pages_created:
             click.echo(f"  {url}")
-    click.echo(f"\nRun ID: {result.run_id}  ({result.iterations} iterations, {result.duration_seconds:.1f}s)")
+    click.echo(
+        f"\nRun ID: {result.run_id}  ({result.iterations} iterations, {result.duration_seconds:.1f}s)"
+    )
 
 
 @cli.command("log")
@@ -94,14 +102,21 @@ def demo(dry_run: bool) -> None:
 def show_log(last: int) -> None:
     """Show recent agent runs."""
     from notion_agent.action_log import list_runs
+
     runs = list_runs(last_n=last)
     if not runs:
         click.echo("No runs logged yet.")
         return
     for r in runs:
         flag = "  [DRY RUN]" if r["dry_run"] else ""
-        pages = f"  → {len(r['pages_created'])} page(s) created" if r["pages_created"] else ""
-        click.echo(f"{r['run_id']}{flag}  {r['timestamp'][:19]}  {r['iterations']} iter  {r['duration_seconds']}s{pages}")
+        pages = (
+            f"  → {len(r['pages_created'])} page(s) created"
+            if r["pages_created"]
+            else ""
+        )
+        click.echo(
+            f"{r['run_id']}{flag}  {r['timestamp'][:19]}  {r['iterations']} iter  {r['duration_seconds']}s{pages}"
+        )
         click.echo(f"  {r['prompt'][:100]}")
         click.echo()
 
@@ -111,6 +126,7 @@ def show_log(last: int) -> None:
 def rollback(run_id: str) -> None:
     """Archive all Notion pages created by a run. Use 'log' to find run IDs."""
     from notion_agent.action_log import rollback_run
+
     try:
         archived = rollback_run(run_id)
     except ValueError as exc:

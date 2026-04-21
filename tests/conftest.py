@@ -12,6 +12,7 @@ import pytest
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _utc(year: int, month: int, day: int) -> datetime:
     return datetime(year, month, day, tzinfo=timezone.utc)
 
@@ -23,6 +24,7 @@ def _page_id() -> str:
 # ---------------------------------------------------------------------------
 # Model fixtures  (imported lazily so tests can run before notion_agent exists)
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture()
 def sample_page_id() -> str:
@@ -64,7 +66,7 @@ def stale_notion_page():
         title="Team Norms (old)",
         url=f"https://www.notion.so/Team-Norms-{pid}",
         parent_id=None,
-        last_edited_time=_utc(2026, 1, 15),   # 77 days before 2026-04-02
+        last_edited_time=_utc(2026, 1, 15),  # 77 days before 2026-04-02
         created_time=_utc(2025, 11, 1),
         created_by="Bob",
         last_edited_by="Bob",
@@ -86,7 +88,7 @@ def sample_chunked_page(sample_notion_page):
         page_url=sample_notion_page.url,
         chunk_index=0,
         text=sample_notion_page.content,
-        embedding=[0.1] * 384,   # dummy 384-dim vector
+        embedding=[0.1] * 384,  # dummy 384-dim vector
         metadata={
             "last_edited_time": sample_notion_page.last_edited_time.isoformat(),
             "created_by": sample_notion_page.created_by,
@@ -116,73 +118,86 @@ def sample_search_result(sample_page_id):
 # Mock Notion client
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture()
 def mock_notion_client(sample_notion_page):
     """AsyncMock of notion_client.AsyncClient wired to return sample data."""
     client = MagicMock()
 
     # pages.retrieve
-    client.pages.retrieve = AsyncMock(return_value={
-        "id": sample_notion_page.id,
-        "url": sample_notion_page.url,
-        "parent": {"type": "workspace", "workspace": True},
-        "last_edited_time": sample_notion_page.last_edited_time.isoformat(),
-        "created_time": sample_notion_page.created_time.isoformat(),
-        "created_by": {"object": "user", "id": "user1", "name": "Alice"},
-        "last_edited_by": {"object": "user", "id": "user1", "name": "Alice"},
-        "properties": {
-            "title": {
-                "type": "title",
-                "title": [{"plain_text": sample_notion_page.title}],
-            }
-        },
-        "is_database": False,
-    })
+    client.pages.retrieve = AsyncMock(
+        return_value={
+            "id": sample_notion_page.id,
+            "url": sample_notion_page.url,
+            "parent": {"type": "workspace", "workspace": True},
+            "last_edited_time": sample_notion_page.last_edited_time.isoformat(),
+            "created_time": sample_notion_page.created_time.isoformat(),
+            "created_by": {"object": "user", "id": "user1", "name": "Alice"},
+            "last_edited_by": {"object": "user", "id": "user1", "name": "Alice"},
+            "properties": {
+                "title": {
+                    "type": "title",
+                    "title": [{"plain_text": sample_notion_page.title}],
+                }
+            },
+            "is_database": False,
+        }
+    )
 
     # blocks.children.list — returns one paragraph block
-    client.blocks.children.list = AsyncMock(return_value={
-        "results": [
-            {
-                "type": "paragraph",
-                "paragraph": {
-                    "rich_text": [{"plain_text": sample_notion_page.content}]
-                },
-            }
-        ],
-        "has_more": False,
-        "next_cursor": None,
-    })
+    client.blocks.children.list = AsyncMock(
+        return_value={
+            "results": [
+                {
+                    "type": "paragraph",
+                    "paragraph": {
+                        "rich_text": [{"plain_text": sample_notion_page.content}]
+                    },
+                }
+            ],
+            "has_more": False,
+            "next_cursor": None,
+        }
+    )
 
     # search — returns one page
-    client.search = AsyncMock(return_value={
-        "results": [
-            {
-                "object": "page",
-                "id": sample_notion_page.id,
-                "url": sample_notion_page.url,
-                "parent": {"type": "workspace", "workspace": True},
-                "last_edited_time": sample_notion_page.last_edited_time.isoformat(),
-                "created_time": sample_notion_page.created_time.isoformat(),
-                "created_by": {"object": "user", "id": "user1", "name": "Alice"},
-                "last_edited_by": {"object": "user", "id": "user1", "name": "Alice"},
-                "properties": {
-                    "title": {
-                        "type": "title",
-                        "title": [{"plain_text": sample_notion_page.title}],
-                    }
-                },
-            }
-        ],
-        "has_more": False,
-        "next_cursor": None,
-    })
+    client.search = AsyncMock(
+        return_value={
+            "results": [
+                {
+                    "object": "page",
+                    "id": sample_notion_page.id,
+                    "url": sample_notion_page.url,
+                    "parent": {"type": "workspace", "workspace": True},
+                    "last_edited_time": sample_notion_page.last_edited_time.isoformat(),
+                    "created_time": sample_notion_page.created_time.isoformat(),
+                    "created_by": {"object": "user", "id": "user1", "name": "Alice"},
+                    "last_edited_by": {
+                        "object": "user",
+                        "id": "user1",
+                        "name": "Alice",
+                    },
+                    "properties": {
+                        "title": {
+                            "type": "title",
+                            "title": [{"plain_text": sample_notion_page.title}],
+                        }
+                    },
+                }
+            ],
+            "has_more": False,
+            "next_cursor": None,
+        }
+    )
 
     # pages.create
     new_id = _page_id()
-    client.pages.create = AsyncMock(return_value={
-        "id": new_id,
-        "url": f"https://www.notion.so/New-Page-{new_id}",
-    })
+    client.pages.create = AsyncMock(
+        return_value={
+            "id": new_id,
+            "url": f"https://www.notion.so/New-Page-{new_id}",
+        }
+    )
 
     # blocks.children.append
     client.blocks.children.append = AsyncMock(return_value={"results": []})
@@ -196,6 +211,7 @@ def mock_notion_client(sample_notion_page):
 # ---------------------------------------------------------------------------
 # Mock VectorStore
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture()
 def mock_vector_store(sample_search_result):
@@ -212,6 +228,7 @@ def mock_vector_store(sample_search_result):
 # ---------------------------------------------------------------------------
 # Pytest-asyncio mode
 # ---------------------------------------------------------------------------
+
 
 # Tell pytest-asyncio to use "auto" mode so async test functions don't need
 # the @pytest.mark.asyncio decorator on every single test.

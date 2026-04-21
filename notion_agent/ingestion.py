@@ -140,7 +140,11 @@ class IngestionPipeline:
 
             # Search is sequential (one call per loop iteration) — no semaphore needed.
             resp = await self._client.search(**kwargs)
-            items = [r for r in resp.get("results", []) if r.get("object") in ("page", "database")]
+            items = [
+                r
+                for r in resp.get("results", [])
+                if r.get("object") in ("page", "database")
+            ]
 
             # Skip pages whose content hasn't changed since last index.
             to_fetch = []

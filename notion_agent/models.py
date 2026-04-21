@@ -103,7 +103,9 @@ class AgentResult:
     pages_created: list[str]
     duration_seconds: float
     iterations: int
-    run_id: str = ""  # set by the agent; use with `python -m notion_agent rollback <run_id>`
+    run_id: str = (
+        ""  # set by the agent; use with `python -m notion_agent rollback <run_id>`
+    )
 
 
 @dataclass

@@ -18,6 +18,7 @@ def get_embedding_model():
     global _embedding_model
     if _embedding_model is None:
         from sentence_transformers import SentenceTransformer
+
         _embedding_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
     return _embedding_model
 
@@ -69,7 +70,12 @@ class VectorStore:
             embeddings=[c.embedding for c in chunks],
             documents=[c.text for c in chunks],
             metadatas=[
-                {"page_id": c.page_id, "page_title": c.page_title, "page_url": c.page_url, **c.metadata}
+                {
+                    "page_id": c.page_id,
+                    "page_title": c.page_title,
+                    "page_url": c.page_url,
+                    **c.metadata,
+                }
                 for c in chunks
             ],
         )

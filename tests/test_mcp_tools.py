@@ -9,9 +9,12 @@ import pytest
 # search_workspace
 # ---------------------------------------------------------------------------
 
+
 class TestSearchWorkspace:
     @pytest.mark.asyncio
-    async def test_returns_list_of_results(self, mock_vector_store, sample_search_result):
+    async def test_returns_list_of_results(
+        self, mock_vector_store, sample_search_result
+    ):
         from notion_agent.mcp_server import search_workspace
 
         result = await search_workspace(
@@ -26,7 +29,9 @@ class TestSearchWorkspace:
         assert result[0]["page_title"] == sample_search_result.page_title
 
     @pytest.mark.asyncio
-    async def test_filter_stale_excludes_recent_pages(self, mock_vector_store, sample_search_result):
+    async def test_filter_stale_excludes_recent_pages(
+        self, mock_vector_store, sample_search_result
+    ):
         """filter_stale=True should exclude pages edited within the last 30 days."""
         from notion_agent.mcp_server import search_workspace
 
@@ -61,6 +66,7 @@ class TestSearchWorkspace:
 # get_page
 # ---------------------------------------------------------------------------
 
+
 class TestGetPage:
     @pytest.mark.asyncio
     async def test_returns_page_dict(self, mock_notion_client, sample_notion_page):
@@ -91,9 +97,12 @@ class TestGetPage:
 # create_page
 # ---------------------------------------------------------------------------
 
+
 class TestCreatePage:
     @pytest.mark.asyncio
-    async def test_returns_page_id_and_url(self, mock_notion_client, sample_notion_page):
+    async def test_returns_page_id_and_url(
+        self, mock_notion_client, sample_notion_page
+    ):
         from notion_agent.mcp_server import create_page
 
         result = await create_page(
@@ -109,7 +118,9 @@ class TestCreatePage:
         assert "url" in result
 
     @pytest.mark.asyncio
-    async def test_notion_pages_create_called(self, mock_notion_client, sample_notion_page):
+    async def test_notion_pages_create_called(
+        self, mock_notion_client, sample_notion_page
+    ):
         from notion_agent.mcp_server import create_page
 
         await create_page(
@@ -124,7 +135,9 @@ class TestCreatePage:
         mock_notion_client.pages.create.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_markdown_heading_converted_to_block(self, mock_notion_client, sample_notion_page):
+    async def test_markdown_heading_converted_to_block(
+        self, mock_notion_client, sample_notion_page
+    ):
         """# Heading must produce a heading_1 block in the API call."""
         from notion_agent.mcp_server import create_page
 
@@ -147,6 +160,7 @@ class TestCreatePage:
 # append_blocks
 # ---------------------------------------------------------------------------
 
+
 class TestAppendBlocks:
     @pytest.mark.asyncio
     async def test_success_true(self, mock_notion_client, sample_notion_page):
@@ -161,7 +175,9 @@ class TestAppendBlocks:
         assert result["success"] is True
 
     @pytest.mark.asyncio
-    async def test_bulleted_list_converted(self, mock_notion_client, sample_notion_page):
+    async def test_bulleted_list_converted(
+        self, mock_notion_client, sample_notion_page
+    ):
         from notion_agent.mcp_server import append_blocks
 
         await append_blocks(
@@ -180,6 +196,7 @@ class TestAppendBlocks:
 # update_page_property
 # ---------------------------------------------------------------------------
 
+
 class TestUpdatePageProperty:
     @pytest.mark.asyncio
     async def test_success_true(self, mock_notion_client, sample_notion_page):
@@ -195,7 +212,9 @@ class TestUpdatePageProperty:
         assert result["success"] is True
 
     @pytest.mark.asyncio
-    async def test_notion_pages_update_called(self, mock_notion_client, sample_notion_page):
+    async def test_notion_pages_update_called(
+        self, mock_notion_client, sample_notion_page
+    ):
         from notion_agent.mcp_server import update_page_property
 
         await update_page_property(
@@ -211,6 +230,7 @@ class TestUpdatePageProperty:
 # ---------------------------------------------------------------------------
 # Content → blocks conversion (shared utility)
 # ---------------------------------------------------------------------------
+
 
 class TestContentToBlocks:
     def test_paragraph(self):

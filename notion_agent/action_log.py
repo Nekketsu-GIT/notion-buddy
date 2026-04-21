@@ -23,10 +23,10 @@ def log_run(
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "prompt": prompt,
         "dry_run": dry_run,
-        "iterations": result.iterations,          # type: ignore[attr-defined]
+        "iterations": result.iterations,  # type: ignore[attr-defined]
         "duration_seconds": round(result.duration_seconds, 2),  # type: ignore[attr-defined]
-        "actions_taken": result.actions_taken,    # type: ignore[attr-defined]
-        "pages_created": result.pages_created,    # type: ignore[attr-defined]
+        "actions_taken": result.actions_taken,  # type: ignore[attr-defined]
+        "pages_created": result.pages_created,  # type: ignore[attr-defined]
         "pages_created_ids": pages_created_ids,
     }
     with LOG_FILE.open("a", encoding="utf-8") as f:

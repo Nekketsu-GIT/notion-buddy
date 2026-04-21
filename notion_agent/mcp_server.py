@@ -18,6 +18,7 @@ from notion_agent.models import extract_title, flatten_block_results
 # Content → Notion blocks conversion
 # ---------------------------------------------------------------------------
 
+
 def _text_block(block_type: str, text: str) -> dict:
     return {
         "type": block_type,
@@ -49,13 +50,17 @@ def content_to_blocks(content: str) -> list[dict]:
                 code_lines.append(lines[i])
                 i += 1
             i += 1  # skip closing ```
-            blocks.append({
-                "type": "code",
-                "code": {
-                    "rich_text": [{"type": "text", "text": {"content": "\n".join(code_lines)}}],
-                    "language": lang or "plain text",
-                },
-            })
+            blocks.append(
+                {
+                    "type": "code",
+                    "code": {
+                        "rich_text": [
+                            {"type": "text", "text": {"content": "\n".join(code_lines)}}
+                        ],
+                        "language": lang or "plain text",
+                    },
+                }
+            )
             continue
 
         if line.startswith("### "):
@@ -82,6 +87,7 @@ def content_to_blocks(content: str) -> list[dict]:
 # ---------------------------------------------------------------------------
 # Tool handler functions
 # ---------------------------------------------------------------------------
+
 
 async def search_workspace(
     query: str,
@@ -133,7 +139,10 @@ async def list_database_entries(
     if filter:
         kwargs["filter"] = filter
     resp = await notion_client.databases.query(**kwargs)
-    return [{"id": r["id"], "properties": r.get("properties", {})} for r in resp.get("results", [])]
+    return [
+        {"id": r["id"], "properties": r.get("properties", {})}
+        for r in resp.get("results", [])
+    ]
 
 
 async def create_page(
@@ -144,7 +153,11 @@ async def create_page(
     properties: dict | None = None,
     notion_client: Any = None,
 ) -> dict:
-    parent = {"database_id": parent_id} if parent_type == "database" else {"page_id": parent_id}
+    parent = (
+        {"database_id": parent_id}
+        if parent_type == "database"
+        else {"page_id": parent_id}
+    )
     title_prop = {"title": [{"type": "text", "text": {"content": title}}]}
     result = await notion_client.pages.create(
         parent=parent,
@@ -182,6 +195,7 @@ async def update_page_property(
 # MCP server entrypoint (stdio transport)
 # ---------------------------------------------------------------------------
 
+
 def run_server() -> None:
     """Start the MCP stdio server."""
     import asyncio
@@ -199,29 +213,97 @@ def run_server() -> None:
     @server.list_tools()
     async def _list_tools() -> list[mct.Tool]:
         return [
-            mct.Tool(name="search_workspace", description="Semantic search over indexed Notion pages.",
-                     inputSchema={"type": "object", "properties": {"query": {"type": "string"}, "top_k": {"type": "integer", "default": 5}, "filter_stale": {"type": "boolean", "default": False}}, "required": ["query"]}),
-            mct.Tool(name="get_page", description="Fetch full content and metadata of a Notion page.",
-                     inputSchema={"type": "object", "properties": {"page_id": {"type": "string"}}, "required": ["page_id"]}),
-            mct.Tool(name="list_database_entries", description="List all entries in a Notion database.",
-                     inputSchema={"type": "object", "properties": {"database_id": {"type": "string"}, "filter": {"type": "object"}}, "required": ["database_id"]}),
-            mct.Tool(name="create_page", description="Create a new Notion page or database entry.",
-                     inputSchema={"type": "object", "properties": {"parent_id": {"type": "string"}, "parent_type": {"type": "string", "enum": ["page", "database"]}, "title": {"type": "string"}, "content": {"type": "string"}, "properties": {"type": "object"}}, "required": ["parent_id", "parent_type", "title", "content"]}),
-            mct.Tool(name="append_blocks", description="Append content blocks to an existing Notion page.",
-                     inputSchema={"type": "object", "properties": {"page_id": {"type": "string"}, "content": {"type": "string"}}, "required": ["page_id", "content"]}),
-            mct.Tool(name="update_page_property", description="Update a single property on a Notion database entry.",
-                     inputSchema={"type": "object", "properties": {"page_id": {"type": "string"}, "property_name": {"type": "string"}, "value": {}}, "required": ["page_id", "property_name", "value"]}),
+            mct.Tool(
+                name="search_workspace",
+                description="Semantic search over indexed Notion pages.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string"},
+                        "top_k": {"type": "integer", "default": 5},
+                        "filter_stale": {"type": "boolean", "default": False},
+                    },
+                    "required": ["query"],
+                },
+            ),
+            mct.Tool(
+                name="get_page",
+                description="Fetch full content and metadata of a Notion page.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {"page_id": {"type": "string"}},
+                    "required": ["page_id"],
+                },
+            ),
+            mct.Tool(
+                name="list_database_entries",
+                description="List all entries in a Notion database.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "database_id": {"type": "string"},
+                        "filter": {"type": "object"},
+                    },
+                    "required": ["database_id"],
+                },
+            ),
+            mct.Tool(
+                name="create_page",
+                description="Create a new Notion page or database entry.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "parent_id": {"type": "string"},
+                        "parent_type": {"type": "string", "enum": ["page", "database"]},
+                        "title": {"type": "string"},
+                        "content": {"type": "string"},
+                        "properties": {"type": "object"},
+                    },
+                    "required": ["parent_id", "parent_type", "title", "content"],
+                },
+            ),
+            mct.Tool(
+                name="append_blocks",
+                description="Append content blocks to an existing Notion page.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "page_id": {"type": "string"},
+                        "content": {"type": "string"},
+                    },
+                    "required": ["page_id", "content"],
+                },
+            ),
+            mct.Tool(
+                name="update_page_property",
+                description="Update a single property on a Notion database entry.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "page_id": {"type": "string"},
+                        "property_name": {"type": "string"},
+                        "value": {},
+                    },
+                    "required": ["page_id", "property_name", "value"],
+                },
+            ),
         ]
 
     @server.call_tool()
     async def _call_tool(name: str, arguments: dict) -> list[mct.TextContent]:
         handlers = {
-            "search_workspace": lambda: search_workspace(vector_store=store, **arguments),
+            "search_workspace": lambda: search_workspace(
+                vector_store=store, **arguments
+            ),
             "get_page": lambda: get_page(notion_client=notion, **arguments),
-            "list_database_entries": lambda: list_database_entries(notion_client=notion, **arguments),
+            "list_database_entries": lambda: list_database_entries(
+                notion_client=notion, **arguments
+            ),
             "create_page": lambda: create_page(notion_client=notion, **arguments),
             "append_blocks": lambda: append_blocks(notion_client=notion, **arguments),
-            "update_page_property": lambda: update_page_property(notion_client=notion, **arguments),
+            "update_page_property": lambda: update_page_property(
+                notion_client=notion, **arguments
+            ),
         }
         handler = handlers.get(name)
         if handler is None:
@@ -231,6 +313,8 @@ def run_server() -> None:
 
     async def _main() -> None:
         async with stdio_server() as (read_stream, write_stream):
-            await server.run(read_stream, write_stream, server.create_initialization_options())
+            await server.run(
+                read_stream, write_stream, server.create_initialization_options()
+            )
 
     asyncio.run(_main())

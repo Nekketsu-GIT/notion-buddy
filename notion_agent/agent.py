@@ -52,15 +52,22 @@ def _make_run_id() -> str:
 
 
 class NotionAgent:
-    def run(self, prompt: str, verbose: bool = True, dry_run: bool = False) -> AgentResult:
+    def run(
+        self, prompt: str, verbose: bool = True, dry_run: bool = False
+    ) -> AgentResult:
         return asyncio.run(self._run_async(prompt, verbose, dry_run))
 
-    async def _run_async(self, prompt: str, verbose: bool, dry_run: bool) -> AgentResult:
+    async def _run_async(
+        self, prompt: str, verbose: bool, dry_run: bool
+    ) -> AgentResult:
         start = time.monotonic()
         run_id = _make_run_id()
 
         if dry_run and verbose:
-            print("[dry-run] Write tools are disabled — no changes will be made to Notion.\n", flush=True)
+            print(
+                "[dry-run] Write tools are disabled — no changes will be made to Notion.\n",
+                flush=True,
+            )
 
         server_params = StdioServerParameters(
             command=sys.executable,
@@ -97,13 +104,17 @@ class NotionAgent:
 
                     # Dry-run: intercept writes, return a description instead.
                     if dry_run and tool_call.name in WRITE_TOOLS:
-                        result_text = json.dumps({
-                            "dry_run": True,
-                            "would_execute": tool_call.name,
-                            "with_args": tool_call.input,
-                        })
+                        result_text = json.dumps(
+                            {
+                                "dry_run": True,
+                                "would_execute": tool_call.name,
+                                "with_args": tool_call.input,
+                            }
+                        )
                         if verbose:
-                            print(f"[dry-run] skipped write: {tool_call.name}", flush=True)
+                            print(
+                                f"[dry-run] skipped write: {tool_call.name}", flush=True
+                            )
                         return {
                             "type": "tool_result",
                             "tool_use_id": tool_call.id,
@@ -111,7 +122,9 @@ class NotionAgent:
                         }
 
                     try:
-                        result = await session.call_tool(tool_call.name, tool_call.input)
+                        result = await session.call_tool(
+                            tool_call.name, tool_call.input
+                        )
                         result_text = result.content[0].text if result.content else "{}"
                         if tool_call.name == "create_page":
                             try:
@@ -158,15 +171,21 @@ class NotionAgent:
                     if response.stop_reason == "end_turn":
                         break
 
-                    tool_use_blocks = [b for b in response.content if b.type == "tool_use"]
+                    tool_use_blocks = [
+                        b for b in response.content if b.type == "tool_use"
+                    ]
                     if not tool_use_blocks:
                         break
 
-                    tool_results = await asyncio.gather(*[_call_tool(tc) for tc in tool_use_blocks])
+                    tool_results = await asyncio.gather(
+                        *[_call_tool(tc) for tc in tool_use_blocks]
+                    )
                     messages.append({"role": "user", "content": list(tool_results)})
 
                 result = AgentResult(
-                    final_answer=_first_text(response.content, reverse=True) if response else "",
+                    final_answer=_first_text(response.content, reverse=True)
+                    if response
+                    else "",
                     actions_taken=actions_taken,
                     pages_created=pages_created,
                     duration_seconds=time.monotonic() - start,
@@ -176,6 +195,7 @@ class NotionAgent:
 
                 # Always log the run (dry or real).
                 from notion_agent.action_log import log_run
+
                 log_run(run_id, prompt, dry_run, result, pages_created_ids)
 
                 return result

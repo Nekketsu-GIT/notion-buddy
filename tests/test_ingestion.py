@@ -11,6 +11,7 @@ import pytest
 # Block flattening
 # ---------------------------------------------------------------------------
 
+
 class TestFlattenBlocks:
     """_flatten_blocks converts raw Notion block responses to plain text."""
 
@@ -31,15 +32,26 @@ class TestFlattenBlocks:
         from notion_agent.ingestion import IngestionPipeline
 
         client = MagicMock()
-        client.blocks.children.list = AsyncMock(return_value={
-            "results": [
-                {"type": "heading_1", "heading_1": {"rich_text": [{"plain_text": "Big Title"}]}},
-                {"type": "heading_2", "heading_2": {"rich_text": [{"plain_text": "Sub Title"}]}},
-                {"type": "paragraph", "paragraph": {"rich_text": [{"plain_text": "Body text."}]}},
-            ],
-            "has_more": False,
-            "next_cursor": None,
-        })
+        client.blocks.children.list = AsyncMock(
+            return_value={
+                "results": [
+                    {
+                        "type": "heading_1",
+                        "heading_1": {"rich_text": [{"plain_text": "Big Title"}]},
+                    },
+                    {
+                        "type": "heading_2",
+                        "heading_2": {"rich_text": [{"plain_text": "Sub Title"}]},
+                    },
+                    {
+                        "type": "paragraph",
+                        "paragraph": {"rich_text": [{"plain_text": "Body text."}]},
+                    },
+                ],
+                "has_more": False,
+                "next_cursor": None,
+            }
+        )
 
         pipeline = IngestionPipeline.__new__(IngestionPipeline)
         pipeline._client = client
@@ -56,14 +68,25 @@ class TestFlattenBlocks:
         from notion_agent.ingestion import IngestionPipeline
 
         client = MagicMock()
-        client.blocks.children.list = AsyncMock(return_value={
-            "results": [
-                {"type": "image", "image": {"type": "external", "external": {"url": "https://example.com/img.png"}}},
-                {"type": "paragraph", "paragraph": {"rich_text": [{"plain_text": "Only this."}]}},
-            ],
-            "has_more": False,
-            "next_cursor": None,
-        })
+        client.blocks.children.list = AsyncMock(
+            return_value={
+                "results": [
+                    {
+                        "type": "image",
+                        "image": {
+                            "type": "external",
+                            "external": {"url": "https://example.com/img.png"},
+                        },
+                    },
+                    {
+                        "type": "paragraph",
+                        "paragraph": {"rich_text": [{"plain_text": "Only this."}]},
+                    },
+                ],
+                "has_more": False,
+                "next_cursor": None,
+            }
+        )
 
         pipeline = IngestionPipeline.__new__(IngestionPipeline)
         pipeline._client = client
@@ -85,12 +108,24 @@ class TestFlattenBlocks:
             call_count += 1
             if call_count == 1:
                 return {
-                    "results": [{"type": "paragraph", "paragraph": {"rich_text": [{"plain_text": "Page 1 text."}]}}],
+                    "results": [
+                        {
+                            "type": "paragraph",
+                            "paragraph": {
+                                "rich_text": [{"plain_text": "Page 1 text."}]
+                            },
+                        }
+                    ],
                     "has_more": True,
                     "next_cursor": "cursor-abc",
                 }
             return {
-                "results": [{"type": "paragraph", "paragraph": {"rich_text": [{"plain_text": "Page 2 text."}]}}],
+                "results": [
+                    {
+                        "type": "paragraph",
+                        "paragraph": {"rich_text": [{"plain_text": "Page 2 text."}]},
+                    }
+                ],
                 "has_more": False,
                 "next_cursor": None,
             }
@@ -111,6 +146,7 @@ class TestFlattenBlocks:
 # Chunking
 # ---------------------------------------------------------------------------
 
+
 class TestChunkAndEmbed:
     def test_short_content_produces_one_chunk(self, sample_notion_page):
         from notion_agent.ingestion import IngestionPipeline
@@ -130,10 +166,12 @@ class TestChunkAndEmbed:
         from notion_agent.ingestion import IngestionPipeline
 
         # Make content long enough to force multiple chunks
-        sample_notion_page.content = ("sentence about Q1 planning decisions.\n" * 200)
+        sample_notion_page.content = "sentence about Q1 planning decisions.\n" * 200
 
         pipeline = IngestionPipeline.__new__(IngestionPipeline)
-        pipeline._embed = MagicMock(side_effect=lambda texts: [[0.0] * 384] * len(texts))
+        pipeline._embed = MagicMock(
+            side_effect=lambda texts: [[0.0] * 384] * len(texts)
+        )
 
         chunks = pipeline._chunk_and_embed(sample_notion_page)
         ids = [c.chunk_id for c in chunks]
@@ -143,23 +181,29 @@ class TestChunkAndEmbed:
     def test_chunk_text_does_not_exceed_token_limit(self, sample_notion_page):
         from notion_agent.ingestion import IngestionPipeline
 
-        sample_notion_page.content = ("word " * 2000)  # ~2000 tokens
+        sample_notion_page.content = "word " * 2000  # ~2000 tokens
 
         pipeline = IngestionPipeline.__new__(IngestionPipeline)
-        pipeline._embed = MagicMock(side_effect=lambda texts: [[0.0] * 384] * len(texts))
+        pipeline._embed = MagicMock(
+            side_effect=lambda texts: [[0.0] * 384] * len(texts)
+        )
 
         chunks = pipeline._chunk_and_embed(sample_notion_page)
 
         for chunk in chunks:
             # Rough token count: split on whitespace
             token_count = len(chunk.text.split())
-            assert token_count <= 512 + 64, f"chunk exceeded limit: {token_count} tokens"
+            assert token_count <= 512 + 64, (
+                f"chunk exceeded limit: {token_count} tokens"
+            )
 
     def test_embedding_dimension(self, sample_notion_page):
         from notion_agent.ingestion import IngestionPipeline
 
         pipeline = IngestionPipeline.__new__(IngestionPipeline)
-        pipeline._embed = MagicMock(return_value=[[float(i % 10) / 10 for i in range(384)]])
+        pipeline._embed = MagicMock(
+            return_value=[[float(i % 10) / 10 for i in range(384)]]
+        )
 
         chunks = pipeline._chunk_and_embed(sample_notion_page)
 
@@ -170,14 +214,19 @@ class TestChunkAndEmbed:
 # Skip logic
 # ---------------------------------------------------------------------------
 
+
 class TestSkipLogic:
     @pytest.mark.asyncio
-    async def test_unchanged_page_is_skipped(self, sample_notion_page, mock_vector_store):
+    async def test_unchanged_page_is_skipped(
+        self, sample_notion_page, mock_vector_store
+    ):
         """Pages not changed since last index should be skipped (not re-embedded)."""
         from notion_agent.ingestion import IngestionPipeline
 
         # last_indexed_at returns the same time as last_edited_time → skip
-        mock_vector_store.last_indexed_at.return_value = sample_notion_page.last_edited_time
+        mock_vector_store.last_indexed_at.return_value = (
+            sample_notion_page.last_edited_time
+        )
 
         pipeline = IngestionPipeline.__new__(IngestionPipeline)
         pipeline._vector_store = mock_vector_store
@@ -203,11 +252,15 @@ class TestSkipLogic:
         assert should_skip is False
 
     @pytest.mark.asyncio
-    async def test_force_reindex_overrides_skip(self, sample_notion_page, mock_vector_store):
+    async def test_force_reindex_overrides_skip(
+        self, sample_notion_page, mock_vector_store
+    ):
         """force_reindex=True must re-embed even unchanged pages."""
         from notion_agent.ingestion import IngestionPipeline
 
-        mock_vector_store.last_indexed_at.return_value = sample_notion_page.last_edited_time
+        mock_vector_store.last_indexed_at.return_value = (
+            sample_notion_page.last_edited_time
+        )
 
         pipeline = IngestionPipeline.__new__(IngestionPipeline)
         pipeline._vector_store = mock_vector_store
