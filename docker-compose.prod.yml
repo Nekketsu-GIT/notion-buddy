@@ -1,0 +1,12 @@
+services:
+  notion-intelligence:
+    image: ghcr.io/nekketsu-git/notion-intelligence:latest
+    container_name: notion-intelligence
+    env_file:
+      - .env.prod
+    volumes:
+      - chroma-data:/data/chroma
+
+volumes:
+  chroma-data:
+    driver: local
