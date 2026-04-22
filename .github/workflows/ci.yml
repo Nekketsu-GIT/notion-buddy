@@ -71,3 +71,4 @@ jobs:
             set -e
             echo "$GHCR_PAT" | docker login ghcr.io -u Nekketsu-GIT --password-stdin
             docker pull "$IMAGE"
+            docker compose -f /opt/apps/notion-intelligence/docker-compose.prod.yml up -d --no-deps notion-web

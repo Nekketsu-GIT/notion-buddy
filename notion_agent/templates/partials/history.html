@@ -1,0 +1,41 @@
+{% if runs %}
+<table class="w-full text-xs">
+  <thead>
+    <tr class="text-left text-slate-600 border-b border-slate-800">
+      <th class="pb-2 pr-6 font-medium">Run ID</th>
+      <th class="pb-2 pr-6 font-medium">Prompt</th>
+      <th class="pb-2 pr-4 font-medium">Iter</th>
+      <th class="pb-2 pr-4 font-medium">Duration</th>
+      <th class="pb-2 pr-4 font-medium">Pages</th>
+      <th class="pb-2 font-medium"></th>
+    </tr>
+  </thead>
+  <tbody class="divide-y divide-slate-800/50">
+    {% for run in runs %}
+    <tr class="hover:bg-slate-800/30 transition">
+      <td class="py-2.5 pr-6 text-slate-400 whitespace-nowrap">
+        {{ run.run_id }}
+        {% if run.dry_run %}<span class="ml-1 text-yellow-600">[dry]</span>{% endif %}
+      </td>
+      <td class="py-2.5 pr-6 text-slate-400 max-w-xs truncate">{{ run.prompt[:80] }}{% if run.prompt|length > 80 %}…{% endif %}</td>
+      <td class="py-2.5 pr-4 text-slate-500">{{ run.iterations }}</td>
+      <td class="py-2.5 pr-4 text-slate-500">{{ run.duration_seconds }}s</td>
+      <td class="py-2.5 pr-4 text-slate-500">{{ run.pages_created | length }}</td>
+      <td class="py-2.5">
+        {% if not run.dry_run and run.get('pages_created_ids', []) %}
+        <form method="post" action="/runs/{{ run.run_id }}/rollback" class="inline">
+          <button type="submit"
+            class="text-red-500 hover:text-red-400 transition"
+            onclick="return confirm('Roll back {{ run.run_id }}? This will archive all pages created by this run.')">
+            rollback
+          </button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="text-slate-600 italic">No runs yet.</p>
+{% endif %}

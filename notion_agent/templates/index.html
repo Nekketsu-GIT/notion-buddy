@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notion Intelligence</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@2.0.0/dist/htmx.min.js"></script>
+  <style>
+    [x-cloak] { display: none; }
+    .scrollbar-thin::-webkit-scrollbar { width: 4px; }
+    .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-300 min-h-screen font-mono text-sm">
+
+  <div class="max-w-6xl mx-auto p-6 space-y-6">
+
+    <!-- Header -->
+    <header class="flex items-center justify-between border-b border-slate-800 pb-4">
+      <div>
+        <h1 class="text-lg font-semibold text-white">Notion Intelligence</h1>
+        <p class="text-slate-500 text-xs mt-0.5">RAG + MCP agent over your Notion workspace</p>
+      </div>
+      <span class="text-xs text-slate-600">claude-sonnet-4-6</span>
+    </header>
+
+    {% if flash %}
+    <div class="bg-blue-900/40 border border-blue-700 text-blue-300 text-xs rounded px-4 py-2">
+      {{ flash }}
+    </div>
+    {% endif %}
+
+    <!-- Main grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <!-- Run form -->
+      <div class="bg-slate-900 border border-slate-800 rounded-lg p-5 space-y-4">
+        <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-widest">Run Agent</h2>
+
+        <textarea
+          id="prompt-input"
+          rows="6"
+          placeholder="Enter a prompt for the agent..."
+          class="w-full bg-slate-950 border border-slate-700 rounded p-3 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-slate-500 resize-none"
+        ></textarea>
+
+        <div class="flex items-center gap-2">
+          <input type="checkbox" id="dry-run" class="rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-0">
+          <label for="dry-run" class="text-xs text-slate-400 cursor-pointer select-none">Dry run (no writes to Notion)</label>
+        </div>
+
+        <div class="flex gap-3">
+          <button id="run-btn" onclick="triggerRun()"
+            class="flex-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-medium py-2 px-4 rounded transition">
+            Run
+          </button>
+          <button onclick="setDemo()"
+            class="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-medium py-2 px-4 rounded transition">
+            Load Demo
+          </button>
+        </div>
+      </div>
+
+      <!-- Live output -->
+      <div class="bg-slate-900 border border-slate-800 rounded-lg p-5 space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-widest">Output</h2>
+          <span id="run-status" class="text-xs text-slate-600"></span>
+        </div>
+        <div id="output"
+          class="h-64 overflow-y-auto scrollbar-thin bg-slate-950 rounded p-3 text-xs space-y-0.5">
+          <div class="text-slate-600 italic">Output will appear here...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Run history -->
+    <div class="bg-slate-900 border border-slate-800 rounded-lg p-5 space-y-4">
+      <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-widest">Run History</h2>
+      <div id="history">
+        {% include "partials/history.html" %}
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const DEMO_PROMPT = "From the workspace pages, extract: (1) decisions, (2) open questions, (3) next actions. Update the 'Décisions & questions ouvertes' page accordingly, and cite the source page for each item.";
+
+    function setDemo() {
+      document.getElementById('prompt-input').value = DEMO_PROMPT;
+    }
+
+    async function triggerRun() {
+      const prompt = document.getElementById('prompt-input').value.trim();
+      if (!prompt) return;
+
+      const dryRun = document.getElementById('dry-run').checked;
+      const output = document.getElementById('output');
+      const status = document.getElementById('run-status');
+      const btn = document.getElementById('run-btn');
+
+      output.innerHTML = '';
+      status.textContent = 'Starting...';
+      btn.disabled = true;
+
+      const body = new FormData();
+      body.append('prompt', prompt);
+      if (dryRun) body.append('dry_run', 'true');
+
+      let runId;
+      try {
+        const res = await fetch('/runs', { method: 'POST', body });
+        ({ run_id: runId } = await res.json());
+      } catch (e) {
+        status.textContent = 'Failed to start run.';
+        btn.disabled = false;
+        return;
+      }
+
+      status.textContent = `${runId} — running`;
+
+      const source = new EventSource(`/runs/${runId}/stream`);
+
+      source.onmessage = (e) => {
+        const line = document.createElement('div');
+        line.textContent = e.data;
+        if      (e.data.startsWith('[tool]'))    line.className = 'text-blue-400';
+        else if (e.data.startsWith('[result]'))  line.className = 'text-green-400';
+        else if (e.data.startsWith('[dry-run]')) line.className = 'text-yellow-400';
+        else if (e.data.startsWith('ERROR'))     line.className = 'text-red-400';
+        else                                     line.className = 'text-slate-300';
+        output.appendChild(line);
+        output.scrollTop = output.scrollHeight;
+      };
+
+      source.addEventListener('done', () => {
+        source.close();
+        status.textContent = `${runId} — done`;
+        btn.disabled = false;
+        htmx.ajax('GET', '/runs/history', { target: '#history', swap: 'innerHTML' });
+      });
+
+      source.onerror = () => {
+        source.close();
+        status.textContent = 'Connection lost.';
+        btn.disabled = false;
+      };
+    }
+  </script>
+</body>
+</html>

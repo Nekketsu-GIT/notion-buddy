@@ -8,7 +8,7 @@ import os
 import sys
 import time
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Callable
 
 import anthropic
 from mcp import ClientSession
@@ -54,20 +54,33 @@ def _make_run_id() -> str:
 
 class NotionAgent:
     def run(
-        self, prompt: str, verbose: bool = True, dry_run: bool = False
+        self,
+        prompt: str,
+        verbose: bool = True,
+        dry_run: bool = False,
+        output_callback: Callable[[str], None] | None = None,
     ) -> AgentResult:
-        return asyncio.run(self._run_async(prompt, verbose, dry_run))
+        return asyncio.run(self._run_async(prompt, verbose, dry_run, output_callback))
 
     async def _run_async(
-        self, prompt: str, verbose: bool, dry_run: bool
+        self,
+        prompt: str,
+        verbose: bool,
+        dry_run: bool,
+        output_callback: Callable[[str], None] | None = None,
     ) -> AgentResult:
         start = time.monotonic()
         run_id = _make_run_id()
 
+        def _out(text: str) -> None:
+            if output_callback:
+                output_callback(text)
+            elif verbose:
+                print(text, flush=True)
+
         if dry_run and verbose:
-            print(
-                "[dry-run] Write tools are disabled — no changes will be made to Notion.\n",
-                flush=True,
+            _out(
+                "[dry-run] Write tools are disabled — no changes will be made to Notion.\n"
             )
 
         server_params = StdioServerParameters(
@@ -101,8 +114,7 @@ class NotionAgent:
                 async def _call_tool(tool_call: Any) -> dict:
                     action = f"{tool_call.name}({json.dumps(tool_call.input)})"
                     actions_taken.append(action)
-                    if verbose:
-                        print(f"\n[tool] {action}", flush=True)
+                    _out(f"[tool] {action}")
 
                     # Dry-run: intercept writes, return a description instead.
                     if dry_run and tool_call.name in WRITE_TOOLS:
@@ -113,10 +125,7 @@ class NotionAgent:
                                 "with_args": tool_call.input,
                             }
                         )
-                        if verbose:
-                            print(
-                                f"[dry-run] skipped write: {tool_call.name}", flush=True
-                            )
+                        _out(f"[dry-run] skipped write: {tool_call.name}")
                         return {
                             "type": "tool_result",
                             "tool_use_id": tool_call.id,
@@ -137,8 +146,7 @@ class NotionAgent:
                                     pages_created_ids.append(pid)
                             except (json.JSONDecodeError, AttributeError):
                                 pass
-                        if verbose:
-                            print(f"[result] {result_text[:200]}", flush=True)
+                        _out(f"[result] {result_text[:200]}")
                         return {
                             "type": "tool_result",
                             "tool_use_id": tool_call.id,
@@ -165,10 +173,9 @@ class NotionAgent:
 
                     messages.append({"role": "assistant", "content": response.content})
 
-                    if verbose:
-                        for block in response.content:
-                            if hasattr(block, "text") and block.text:
-                                print(block.text, flush=True)
+                    for block in response.content:
+                        if hasattr(block, "text") and block.text:
+                            _out(block.text)
 
                     if response.stop_reason == "end_turn":
                         break

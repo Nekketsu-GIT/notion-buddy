@@ -8,8 +8,31 @@ services:
       - chroma-data:/data/chroma
       - agent-log:/data/agent_log
 
+  notion-web:
+    image: ghcr.io/nekketsu-git/notion-intelligence:latest
+    container_name: notion-intelligence-web
+    restart: unless-stopped
+    command: ["web"]
+    env_file:
+      - .env.prod
+    volumes:
+      - chroma-data:/data/chroma
+      - agent-log:/data/agent_log
+    networks:
+      - web
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.notion_web.rule=Host(`notion-buddy.dokidokidev.com`)"
+      - "traefik.http.routers.notion_web.entrypoints=websecure"
+      - "traefik.http.routers.notion_web.tls.certresolver=zerossl"
+      - "traefik.http.services.notion_web.loadbalancer.server.port=8000"
+
 volumes:
   chroma-data:
     driver: local
   agent-log:
     driver: local
+
+networks:
+  web:
+    external: true

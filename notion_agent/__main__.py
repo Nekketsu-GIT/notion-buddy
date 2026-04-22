@@ -140,5 +140,15 @@ def rollback(run_id: str) -> None:
         click.echo("No pages to roll back (run created no pages).")
 
 
+@cli.command()
+@click.option("--host", default="0.0.0.0", show_default=True)
+@click.option("--port", default=8000, show_default=True)
+def web(host: str, port: int) -> None:
+    """Start the web UI server."""
+    from notion_agent.web import start
+
+    start(host=host, port=port)
+
+
 if __name__ == "__main__":
     cli()
