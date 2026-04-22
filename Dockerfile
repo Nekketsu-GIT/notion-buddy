@@ -18,6 +18,7 @@ COPY notion_agent/ ./notion_agent/
 # Persist dirs — mount volumes to keep data across runs
 ENV CHROMA_PERSIST_DIR=/data/chroma
 ENV AGENT_LOG_DIR=/data/agent_log
+ENV HF_HUB_OFFLINE=1
 VOLUME ["/data/chroma", "/data/agent_log"]
 
 ENTRYPOINT ["python", "-m", "notion_agent"]
