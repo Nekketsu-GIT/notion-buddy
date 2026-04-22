@@ -63,22 +63,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          source: docker-compose.prod.yml
-          target: /opt/apps/notion-intelligence/
+      - name: Encode compose file
+        run: echo "COMPOSE_B64=$(base64 -w 0 docker-compose.prod.yml)" >> $GITHUB_ENV
 
       - uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          envs: GHCR_PAT,IMAGE
+          envs: GHCR_PAT,IMAGE,COMPOSE_B64
           script: |
             set -e
+            echo "$COMPOSE_B64" | base64 -d > /opt/apps/notion-intelligence/docker-compose.prod.yml
             echo "$GHCR_PAT" | docker login ghcr.io -u Nekketsu-GIT --password-stdin
             docker pull "$IMAGE"
             docker compose -f /opt/apps/notion-intelligence/docker-compose.prod.yml up -d --no-deps notion-web
