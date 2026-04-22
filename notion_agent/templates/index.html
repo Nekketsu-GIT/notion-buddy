@@ -140,7 +140,9 @@
         source.close();
         status.textContent = `${runId} — done`;
         btn.disabled = false;
-        htmx.ajax('GET', '/runs/history', { target: '#history', swap: 'innerHTML' });
+        fetch('/runs/history')
+          .then(r => r.text())
+          .then(html => { document.getElementById('history').innerHTML = html; });
       });
 
       source.onerror = () => {
