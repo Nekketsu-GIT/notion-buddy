@@ -53,7 +53,7 @@ def _run_agent(run_id: str, prompt: str, dry_run: bool) -> None:
 async def index(request: Request) -> HTMLResponse:
     runs = list_runs(last_n=20)
     return _templates.TemplateResponse(
-        "index.html", {"request": request, "runs": list(reversed(runs))}
+        request, "index.html", {"runs": list(reversed(runs))}
     )
 
 
@@ -61,7 +61,7 @@ async def index(request: Request) -> HTMLResponse:
 async def history(request: Request) -> HTMLResponse:
     runs = list_runs(last_n=20)
     return _templates.TemplateResponse(
-        "partials/history.html", {"request": request, "runs": list(reversed(runs))}
+        request, "partials/history.html", {"runs": list(reversed(runs))}
     )
 
 
@@ -113,7 +113,7 @@ async def do_rollback(request: Request, run_id: str) -> HTMLResponse:
         flash = str(exc)
     runs = list_runs(last_n=20)
     return _templates.TemplateResponse(
-        "index.html", {"request": request, "runs": list(reversed(runs)), "flash": flash}
+        request, "index.html", {"runs": list(reversed(runs)), "flash": flash}
     )
 
 
